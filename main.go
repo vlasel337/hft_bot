@@ -7,10 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal" // Пакет для обработки сигналов ОС
 	"strconv"
+	"syscall" // Пакет для системных вызовов (сигналов)
 	"time"
 
-	"github.com/joho/godotenv" // Импортируем библиотеку для работы с .env
+	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -52,7 +54,6 @@ type OkxPriceSnapshot struct {
 	CreatedAt time.Time `gorm:"column:created_at;type:timestamp with time zone;default:CURRENT_TIMESTAMP"`
 }
 
-// Указываем GORM имя таблицы
 func (OkxPriceSnapshot) TableName() string {
 	return "okx_price_snapshots"
 }
@@ -67,7 +68,6 @@ func fetchOrderBook(instrumentID string, depth int) (*OrderBookData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ошибка создания HTTP запроса: %w", err)
 	}
-	// Добавление заголовка User-Agent может помочь избежать блокировки
 	req.Header.Set("User-Agent", "Go OKX API Client/1.0")
 
 	client := &http.Client{Timeout: 10 * time.Second} // Устанавливаем таймаут
@@ -101,7 +101,6 @@ func fetchOrderBook(instrumentID string, depth int) (*OrderBookData, error) {
 		return nil, fmt.Errorf("ответ API не содержит данных книги ордеров")
 	}
 
-	// Return the first (and likely only) item in the data array for this endpoint
 	return &apiResponse.Data[0], nil
 }
 
@@ -111,27 +110,22 @@ func processOrderBookData(data *OrderBookData) (*PriceData, error) {
 		return nil, fmt.Errorf("книга ордеров пуста (нет предложений покупки или продажи)")
 	}
 
-	// The first element in the bids array is the best bid
 	bestBidStr := data.Bids[0][0]
 	bestBid, err := strconv.ParseFloat(bestBidStr, 64)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка парсинга лучшей цены покупки '%s': %w", bestBidStr, err)
 	}
 
-	// The first element in the asks array is the best ask
 	bestAskStr := data.Asks[0][0]
 	bestAsk, err := strconv.ParseFloat(bestAskStr, 64)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка парсинга лучшей цены продажи '%s': %w", bestAskStr, err)
 	}
 
-	// Parse timestamp (OKX uses milliseconds since epoch)
 	tsInt, err := strconv.ParseInt(data.Ts, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка парсинга временной метки '%s': %w", data.Ts, err)
 	}
-	// Преобразуем временную метку из миллисекунд в time.Time
-	// Используем time.UTC для создания временной метки в UTC
 	timestamp := time.Unix(0, tsInt*int64(time.Millisecond)).UTC()
 
 	return &PriceData{
@@ -143,16 +137,13 @@ func processOrderBookData(data *OrderBookData) (*PriceData, error) {
 
 // savePriceDataToPostgresGORM saves the price data to the PostgreSQL database using GORM
 func savePriceDataToPostgresGORM(db *gorm.DB, data *PriceData) error {
-	// Создаем экземпляр GORM модели из полученных данных
 	snapshot := OkxPriceSnapshot{
 		Timestamp: data.Timestamp,
 		BestBid:   data.BestBid,
 		BestAsk:   data.BestAsk,
-		// CreatedAt будет установлено автоматически базой данных благодаря DEFAULT CURRENT_TIMESTAMP
 	}
 
-	// Создаем запись в базе данных с помощью GORM
-	result := db.Create(&snapshot) // Передаем указатель на структуру
+	result := db.Create(&snapshot)
 
 	if result.Error != nil {
 		return fmt.Errorf("ошибка сохранения данных в БД через GORM: %w", result.Error)
@@ -165,17 +156,16 @@ func savePriceDataToPostgresGORM(db *gorm.DB, data *PriceData) error {
 }
 
 func main() {
-	instrument := "BTC-USDT" // Укажите нужный инструмент
-	depth := 5               // Укажите нужную глубину стакана (количество уровней)
+	instrument := "BTC-USDT"    // Укажите нужный инструмент
+	depth := 5                  // Укажите нужную глубину стакана (количество уровней)
+	interval := 1 * time.Minute // Интервал сбора данных
 
 	// Загрузка переменных окружения из .env файла
 	err := godotenv.Load(ENV_FILENAME)
 	if err != nil {
-		// Если файл .env не найден или ошибка чтения, логируем и выходим.
-		// В продакшене переменные могут быть установлены напрямую в окружении.
 		log.Printf("Внимание: Не удалось загрузить %s файл. Проверьте, что переменные окружения БД установлены вручную. Ошибка: %v", ENV_FILENAME, err)
-		// Если файл не критичен (переменные могут быть в окружении), можно не выходить здесь.
-		// log.Fatalf("Ошибка загрузки .env файла: %v", err) // Если файл обязателен
+		// В продакшене, возможно, лучше выйти с ошибкой, если .env обязателен:
+		// log.Fatalf("Ошибка загрузки .env файла: %v", err)
 	}
 
 	// Получение параметров подключения из переменных окружения
@@ -186,13 +176,11 @@ func main() {
 	dbPort := os.Getenv("DB_PORT")
 
 	// Формирование строки подключения
-	// Убедитесь, что все необходимые переменные окружения установлены
 	if dbHost == "" || dbUser == "" || dbPassword == "" || dbName == "" || dbPort == "" {
 		log.Fatalf("Отсутствуют необходимые переменные окружения для подключения к БД. Проверьте .env файл или настройки окружения.")
 	}
 
-	// Формируем строку подключения, используя полученные из окружения значения
-	// sslmode=disable используется для упрощения, для продакшена настройте SSL
+	// Используем формат DSN для GORM, он же подходит и для database/sql
 	dbConnectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=require",
 		dbHost, dbPort, dbUser, dbPassword, dbName)
 
@@ -201,13 +189,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Ошибка подключения к базе данных через GORM: %v", err)
 	}
-	// В GORM нет отдельного Ping(), Open() уже устанавливает соединение.
-	// db.DB() возвращает *sql.DB, можно использовать db.DB().Ping(), но это опционально.
 	log.Println("Успешное подключение к базе данных PostgreSQL через GORM.")
 
 	// Опционально: Автоматическая миграция схемы таблицы (для разработки удобно)
-	// Если таблица уже создана вручную, этот шаг можно пропустить или использовать его
-	// для автоматического добавления новых полей в будущем.
 	// log.Println("Выполнение автоматической миграции схемы БД...")
 	// err = db.AutoMigrate(&OkxPriceSnapshot{})
 	// if err != nil {
@@ -215,26 +199,58 @@ func main() {
 	// }
 	// log.Println("Автоматическая миграция завершена.")
 
-	log.Printf("Запрос данных книги ордеров для %s...", instrument)
+	// Настройка тикера для запуска задачи каждую минуту
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop() // Гарантируем остановку тикера при выходе
 
+	// Канал для сигналов завершения
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM) // Ловим SIGINT (Ctrl+C) и SIGTERM (сигнал от systemd)
+
+	log.Printf("Скрипт запущен и собирает данные для %s каждые %s...", instrument, interval)
+
+	// Запуск первой задачи сразу при старте
+	go func() {
+		log.Println("Выполнение первой задачи немедленно...")
+		collectAndSave(db, instrument, depth)
+	}()
+
+	// Основной цикл, который ждет тиков или сигнала завершения
+	for {
+		select {
+		case <-ticker.C:
+			// Срабатывает каждую минуту
+			log.Println("Сработал тикер. Выполнение задачи...")
+			collectAndSave(db, instrument, depth)
+		case <-stop:
+			// Получен сигнал завершения
+			log.Println("Получен сигнал завершения. Остановка скрипта...")
+			// Здесь можно добавить логику корректного завершения, например, закрытие соединений
+			// Соединение с БД уже закроется через defer в main
+			return // Завершаем функцию main и скрипт
+		}
+	}
+}
+
+// collectAndSave инкапсулирует логику получения и сохранения данных
+func collectAndSave(db *gorm.DB, instrument string, depth int) {
 	orderBookData, err := fetchOrderBook(instrument, depth)
 	if err != nil {
-		log.Fatalf("Ошибка получения книги ордеров: %v", err) // Выходим при фатальной ошибке
+		log.Printf("Ошибка в collectAndSave при получении книги ордеров: %v", err)
+		return // Продолжаем работу, просто пропуская этот интервал
 	}
 
 	priceData, err := processOrderBookData(orderBookData)
 	if err != nil {
-		log.Fatalf("Ошибка обработки данных книги ордеров: %v", err) // Выходим при фатальной ошибке
+		log.Printf("Ошибка в collectAndSave при обработке данных книги ордеров: %v", err)
+		return // Продолжаем работу, просто пропуская этот интервал
 	}
 
-	log.Printf("Получены данные: Timestamp=%s, BestBid=%.4f, BestAsk=%.4f", priceData.Timestamp.Format(time.RFC3339), priceData.BestBid, priceData.BestAsk)
+	// log.Printf("Получены данные: Timestamp=%s, BestBid=%.4f, BestAsk=%.4f", priceData.Timestamp.Format(time.RFC3339), priceData.BestBid, priceData.BestAsk)
 
-	// Сохраняем данные в таблицу PostgreSQL с помощью GORM
 	err = savePriceDataToPostgresGORM(db, priceData)
 	if err != nil {
-		log.Fatalf("Ошибка сохранения данных в PostgreSQL через GORM: %v", err) // Выходим при фатальной ошибке сохранения
+		log.Printf("Ошибка в collectAndSave при сохранении данных в PostgreSQL: %v", err)
+		// Здесь можно добавить логику повторных попыток или уведомлений
 	}
-
-	log.Println("Скрипт завершил выполнение.")
-	// Скрипт завершит выполнение после этого
 }
