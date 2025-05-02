@@ -299,11 +299,3 @@ func main() {
 		}
 	}
 }
-
-// collectAndSave инкапсулирует логику получения, обработки и сохранения данных
-// Эта функция была обновлена для работы с уровнями
-/*
-func collectAndSave(db *gorm.DB, instrument string, depth int) {
-	// Код этой функции находится выше, она вызывает extractOrderBookLevels и saveOrderBookLevelsGORM
-}
-*/

@@ -44,5 +44,11 @@ CREATE TABLE okx_price_levels (
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
-select * from okx_price_levels;
+
+-- Смотрим результаты
+select count(*) from okx_price_levels;
+
+select * from okx_price_levels
+where type = 'ask'
+order by snapshot_timestamp desc, id desc;
 
