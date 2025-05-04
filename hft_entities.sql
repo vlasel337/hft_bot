@@ -49,6 +49,8 @@ CREATE TABLE okx_price_levels (
 select count(*) from okx_price_levels;
 
 select * from okx_price_levels
-where type = 'ask'
-order by snapshot_timestamp desc, id desc;
+where 1=1
+    and type = 'ask'
+order by snapshot_timestamp desc, id desc
+limit 1000;
 
