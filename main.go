@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -231,19 +230,25 @@ func main() {
 	interval := 1 * time.Minute // Интервал сбора данных
 
 	// Загрузка переменных окружения из .env файла
-	err := godotenv.Load(ENV_FILENAME)
-	if err != nil {
-		log.Printf("Внимание: Не удалось загрузить %s файл. Проверьте, что переменные окружения БД установлены вручную. Ошибка: %v", ENV_FILENAME, err)
-		// В продакшене, возможно, лучше выйти с ошибкой, если .env обязателен:
-		// log.Fatalf("Ошибка загрузки .env файла: %v", err)
-	}
+	// err := godotenv.Load(ENV_FILENAME)
+	// if err != nil {
+	// 	log.Printf("Внимание: Не удалось загрузить %s файл. Проверьте, что переменные окружения БД установлены вручную. Ошибка: %v", ENV_FILENAME, err)
+	// 	// В продакшене, возможно, лучше выйти с ошибкой, если .env обязателен:
+	// 	// log.Fatalf("Ошибка загрузки .env файла: %v", err)
+	// }
 
 	// Получение параметров подключения из переменных окружения
-	dbHost := os.Getenv("DB_HOST")
-	dbUser := os.Getenv("DB_USER")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
-	dbPort := os.Getenv("DB_PORT")
+	// dbHost := os.Getenv("DB_HOST")
+	// dbUser := os.Getenv("DB_USER")
+	// dbPassword := os.Getenv("DB_PASSWORD")
+	// dbName := os.Getenv("DB_NAME")
+	// dbPort := os.Getenv("DB_PORT")
+
+	dbHost := "dpg-d05l1pq4d50c73f4qqfg-a.frankfurt-postgres.render.com"
+	dbUser := "admin"
+	dbPassword := "958G9FNfWvQGUvfmy3oiiftd5MjAu0OD"
+	dbName := "hft_0yd2"
+	dbPort := "5432"
 
 	// Формирование строки подключения
 	if dbHost == "" || dbUser == "" || dbPassword == "" || dbName == "" || dbPort == "" {
