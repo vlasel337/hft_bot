@@ -22,16 +22,16 @@ primary_region = 'cdg'
   processes = ['app']
 
   # Секция для health check(s)
-  [[http_service.checks]]
-    interval = "30s"            # Интервал проверки (каждые 15 секунд)
-    timeout = "5s"              # Таймаут проверки (ошибка через 5 секунд)
-    grace_period = "10s"        # Период ожидания после старта машины (10 секунд)
-    method = "GET"              # Метод HTTP запроса
-    path = "/health"            # Путь к эндпоинту в вашем Go приложении
-    protocol = "http"           # Протокол проверки (HTTP к internal_port)
-    # port = 8080               # Порт (необязательно, если совпадает с internal_port)
-    # [http_service.checks.headers] # Опциональные заголовки
-    #   X-Health-Check = "true"
+  # [[http_service.checks]]
+  #   interval = "30s"            # Интервал проверки (каждые 15 секунд)
+  #   timeout = "5s"              # Таймаут проверки (ошибка через 5 секунд)
+  #   grace_period = "10s"        # Период ожидания после старта машины (10 секунд)
+  #   method = "GET"              # Метод HTTP запроса
+  #   path = "/health"            # Путь к эндпоинту в вашем Go приложении
+  #   protocol = "http"           # Протокол проверки (HTTP к internal_port)
+  #   # port = 8080               # Порт (необязательно, если совпадает с internal_port)
+  #   # [http_service.checks.headers] # Опциональные заголовки
+  #   #   X-Health-Check = "true"
 
 [[vm]]
   memory = '1gb'
