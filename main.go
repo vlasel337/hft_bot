@@ -224,6 +224,15 @@ func collectAndSave(db *gorm.DB, instrument string, depth int) {
 	}
 }
 
+// healthCheckHandler отвечает на запросы проверки состояния
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	// Устанавливаем статус 200 OK
+	w.WriteHeader(http.StatusOK)
+	// Отправляем простое тело ответа (необязательно, но полезно для отладки)
+	fmt.Fprintln(w, "OK")
+	log.Println("Health check request processed successfully.") // Логируем успешный health check
+}
+
 func main() {
 	instrument := "BTC-USDT"    // Укажите нужный инструмент
 	depth := 5                  // *** Укажите, сколько уровней с КАЖДОЙ стороны вы хотите получить (например, 5 даст 5 bid + 5 ask, 10 даст 10 bid + 10 ask) ***
@@ -244,6 +253,29 @@ func main() {
 	// dbName := os.Getenv("DB_NAME")
 	// dbPort := os.Getenv("DB_PORT")
 
+	// Определяем порт для health check сервера
+	// Fly.io обычно устанавливает переменную окружения PORT
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Порт по умолчанию, если PORT не установлен
+	}
+	listenAddr := ":" + port // Формат для ListenAndServe, например ":8080"
+
+	// Регистрируем обработчик для пути /health
+	http.HandleFunc("/health", healthCheckHandler)
+
+	// Запускаем HTTP-сервер в отдельной горутине
+	go func() {
+		log.Printf("Health check server starting to listen on %s", listenAddr)
+		// ListenAndServe блокирует выполнение, пока сервер работает или не возникнет ошибка
+		if err := http.ListenAndServe(listenAddr, nil); err != nil {
+			// Логируем ошибку, если сервер не смог запуститься
+			// Не используем log.Fatalf, чтобы не остановить основное приложение
+			log.Printf("ERROR: Health check server failed: %v", err)
+		}
+	}()
+
+	//Передаем креды БД в явном виде (нужно будет убрать спрятать их в переменные окружения)
 	dbHost := "dpg-d05l1pq4d50c73f4qqfg-a.frankfurt-postgres.render.com"
 	dbUser := "admin"
 	dbPassword := "958G9FNfWvQGUvfmy3oiiftd5MjAu0OD"
