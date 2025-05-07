@@ -78,3 +78,33 @@ where 1=1
 order by snapshot_timestamp desc, id desc
 limit 1000;
 
+-- Чистки таблиц
+delete from okx_prices_btc;
+delete from okx_prices_eth;
+delete from okx_prices_sol;
+delete from okx_prices_ton;
+
+drop table "okx_prices_TON";
+drop table "okx_prices_BTC";
+drop table "okx_prices_ETH";
+drop table "okx_prices_SOL";
+
+------ Проверяем заполняемость
+select 'BTC' as ticker, count(*) as cnt_rows
+from okx_prices_btc
+
+UNION
+
+select 'ETH' as ticker, count(*) as cnt_rows
+from okx_prices_eth
+
+UNION
+
+select 'SOL' as ticker, count(*) as cnt_rows
+from okx_prices_sol
+
+UNION
+
+select 'TON' as ticker, count(*) as cnt_rows
+from okx_prices_ton;
+

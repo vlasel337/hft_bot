@@ -48,9 +48,10 @@ type OrderBookLevel struct {
 	RecordedAt        time.Time `gorm:"column:recorded_at;type:timestamp with time zone;default:CURRENT_TIMESTAMP"`
 }
 
-// Указываем GORM имя таблицы
-func (OrderBookLevel) TableName() string {
-	return "okx_price_levels" // Новое имя таблицы
+// Структура для конфигурации отслеживаемых инструментов
+type InstrumentConfig struct {
+	ApiID     string // Идентификатор для OKX API (например, "BTC-USDT")
+	TableName string // Имя таблицы в БД (например, "okx_prices_BTC")
 }
 
 // fetchOrderBook fetches order book data from OKX API
@@ -182,59 +183,56 @@ func extractOrderBookLevels(data *OrderBookData, depth int) ([]OrderBookLevel, e
 	return levels, nil
 }
 
-// saveOrderBookLevelsGORM saves multiple order book levels to the database using GORM
-func saveOrderBookLevelsGORM(db *gorm.DB, levels []OrderBookLevel) error {
+// saveOrderBookLevelsGORM saves multiple order book levels to the specified table using GORM
+func saveOrderBookLevelsGORM(db *gorm.DB, levels []OrderBookLevel, tableName string) error {
 	if len(levels) == 0 {
-		log.Println("Нет уровней книги ордеров для сохранения.")
+		log.Printf("[%s] Нет уровней книги ордеров для сохранения.", tableName)
 		return nil // Ничего не сохраняем, это не ошибка
 	}
 
-	// GORM поддерживает массовую вставку (bulk insert) при передаче среза структур
-	result := db.Create(&levels)
+	// Указываем таблицу динамически
+	result := db.Table(tableName).Create(&levels) // Используем db.Table(tableName)
 
 	if result.Error != nil {
-		return fmt.Errorf("ошибка массового сохранения данных в БД через GORM: %w", result.Error)
+		return fmt.Errorf("[%s] ошибка массового сохранения данных в БД через GORM: %w", tableName, result.Error)
 	}
 
-	log.Printf("Успешно сохранено %d уровней книги ордеров в БД", len(levels))
-
+	log.Printf("[%s] Успешно сохранено %d уровней книги ордеров в БД", tableName, len(levels))
 	return nil
 }
 
-// collectAndSave инкапсулирует логику получения, обработки и сохранения данных
-func collectAndSave(db *gorm.DB, instrument string, depth int) {
-	orderBookData, err := fetchOrderBook(instrument, depth)
+// collectAndSave инкапсулирует логику получения, обработки и сохранения данных для указанного инструмента и таблицы
+func collectAndSave(db *gorm.DB, instrumentApiID string, depth int, tableName string) {
+	log.Printf("[%s] Начинаем сбор данных...", instrumentApiID)
+	orderBookData, err := fetchOrderBook(instrumentApiID, depth)
 	if err != nil {
-		log.Printf("Ошибка в collectAndSave при получении книги ордеров: %v", err)
-		return // Продолжаем работу
+		log.Printf("[%s] Ошибка в collectAndSave при получении книги ордеров: %v", instrumentApiID, err)
+		return
 	}
 
-	// Извлекаем все необходимые уровни
 	levels, err := extractOrderBookLevels(orderBookData, depth)
 	if err != nil {
-		log.Printf("Ошибка в collectAndSave при обработке данных книги ордеров: %v", err)
-		return // Продолжаем работу
+		log.Printf("[%s] Ошибка в collectAndSave при обработке данных книги ордеров: %v", instrumentApiID, err)
+		return
 	}
 
-	// Сохраняем все полученные уровни в таблицу PostgreSQL с помощью GORM
-	err = saveOrderBookLevelsGORM(db, levels)
+	// Сохраняем все полученные уровни в указанную таблицу
+	err = saveOrderBookLevelsGORM(db, levels, tableName)
 	if err != nil {
-		log.Printf("Ошибка в collectAndSave при сохранении данных в PostgreSQL: %v", err)
-		// Здесь можно добавить логику повторных попыток или уведомлений
+		log.Printf("[%s -> %s] Ошибка в collectAndSave при сохранении данных: %v", instrumentApiID, tableName, err)
 	}
 }
 
-// healthCheckHandler отвечает на запросы проверки состояния
-// func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-// 	// Устанавливаем статус 200 OK
-// 	w.WriteHeader(http.StatusOK)
-// 	// Отправляем простое тело ответа (необязательно, но полезно для отладки)
-// 	fmt.Fprintln(w, "OK")
-// 	log.Println("Health check request processed successfully.") // Логируем успешный health check
-// }
-
 func main() {
-	instrument := "BTC-USDT"    // Укажите нужный инструмент
+	// Список инструментов для отслеживания
+	instrumentsToMonitor := []InstrumentConfig{
+		{ApiID: "BTC-USDT", TableName: "okx_prices_btc"},
+		{ApiID: "ETH-USDT", TableName: "okx_prices_eth"},
+		{ApiID: "SOL-USDT", TableName: "okx_prices_sol"},
+		{ApiID: "TON-USDT", TableName: "okx_prices_ton"},
+		// Добавьте сюда другие инструменты при необходимости
+	}
+
 	depth := 5                  // *** Укажите, сколько уровней с КАЖДОЙ стороны вы хотите получить (например, 5 даст 5 bid + 5 ask, 10 даст 10 bid + 10 ask) ***
 	interval := 1 * time.Minute // Интервал сбора данных
 
@@ -252,28 +250,6 @@ func main() {
 	// dbPassword := os.Getenv("DB_PASSWORD")
 	// dbName := os.Getenv("DB_NAME")
 	// dbPort := os.Getenv("DB_PORT")
-
-	// Определяем порт для health check сервера
-	// Fly.io обычно устанавливает переменную окружения PORT
-	// port := os.Getenv("PORT")
-	// if port == "" {
-	// 	port = "8080" // Порт по умолчанию, если PORT не установлен
-	// }
-	// listenAddr := ":" + port // Формат для ListenAndServe, например ":8080"
-
-	// // Регистрируем обработчик для пути /health
-	// http.HandleFunc("/health", healthCheckHandler)
-
-	// // Запускаем HTTP-сервер в отдельной горутине
-	// go func() {
-	// 	log.Printf("Health check server starting to listen on %s", listenAddr)
-	// 	// ListenAndServe блокирует выполнение, пока сервер работает или не возникнет ошибка
-	// 	if err := http.ListenAndServe(listenAddr, nil); err != nil {
-	// 		// Логируем ошибку, если сервер не смог запуститься
-	// 		// Не используем log.Fatalf, чтобы не остановить основное приложение
-	// 		log.Printf("ERROR: Health check server failed: %v", err)
-	// 	}
-	// }()
 
 	//Передаем креды БД в явном виде (нужно будет убрать спрятать их в переменные окружения)
 	dbHost := "dpg-d05l1pq4d50c73f4qqfg-a.frankfurt-postgres.render.com"
@@ -298,41 +274,55 @@ func main() {
 	}
 	log.Println("Успешное подключение к базе данных PostgreSQL через GORM.")
 
-	// !!! ВНИМАНИЕ: Если вы используете новую таблицу okx_price_levels,
-	//  закомментируйте старую миграцию и раскомментируйте эту, если нужна авто-миграция
-	// Опционально: Автоматическая миграция схемы новой таблицы
-	// log.Println("Выполнение автоматической миграции схемы БД для okx_price_levels...")
-	// err = db.AutoMigrate(&OrderBookLevel{})
-	// if err != nil {
-	// 	log.Fatalf("Ошибка выполнения автоматической миграции: %v", err)
-	// }
-	// log.Println("Автоматическая миграция завершена.")
+	// --- Автоматическая миграция (если нужна) ---
+	// Теперь миграцию нужно делать для каждой таблицы
+	runAutoMigration := true // Установите true, если хотите выполнить миграцию при запуске
+	if runAutoMigration {
+		log.Println("Выполнение автоматической миграции схем БД...")
+		for _, config := range instrumentsToMonitor {
+			log.Printf("Миграция для таблицы %s...", config.TableName)
+			// Указываем GORM, для какой таблицы выполнить миграцию и какую структуру использовать
+			err := db.Table(config.TableName).AutoMigrate(&OrderBookLevel{})
+			if err != nil {
+				log.Fatalf("Ошибка выполнения автоматической миграции для таблицы %s: %v", config.TableName, err)
+			}
+			log.Printf("Автоматическая миграция для таблицы %s завершена.", config.TableName)
+		}
+		log.Println("Все автоматические миграции завершены.")
+	}
 
+	// Основная логика (с циклом по инструментам)
 	// Настройка тикера для запуска задачи каждую минуту
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	// Канал для сигналов завершения
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-	log.Printf("Скрипт запущен и собирает данные для %s каждые %s...", instrument, interval)
+	log.Printf("Скрипт запущен. Интервал сбора данных: %s", interval)
 
-	// Запуск первой задачи сразу при старте
-	go func() {
-		log.Println("Выполнение первой задачи немедленно...")
-		collectAndSave(db, instrument, depth) // Используем обновленную функцию collectAndSave
-	}()
+	// Первоначальный сбор данных для всех инструментов
+	log.Println("Выполнение первоначального сбора данных для всех инструментов...")
+	for _, config := range instrumentsToMonitor {
+		go collectAndSave(db, config.ApiID, depth, config.TableName) // Запускаем в горутинах, чтобы не блокировать
+	}
 
-	// Основной цикл, который ждет тиков или сигнала завершения
+	// Основной цикл
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Сработал тикер. Выполнение задачи...")
-			collectAndSave(db, instrument, depth) // Используем обновленную функцию collectAndSave
+			log.Println("Сработал тикер. Выполнение задач для всех инструментов...")
+			for _, config := range instrumentsToMonitor {
+				// Можно запускать в горутинах, если сбор данных для одного инструмента не должен блокировать другие
+				// и если API не будет вас блокировать за частые параллельные запросы.
+				// Для последовательного сбора:
+				// collectAndSave(db, config.ApiID, depth, config.TableName)
+				// Для параллельного сбора:
+				go collectAndSave(db, config.ApiID, depth, config.TableName)
+			}
 		case <-stop:
 			log.Println("Получен сигнал завершения. Остановка скрипта...")
-			return // Выход из функции main
+			return
 		}
 	}
 }
