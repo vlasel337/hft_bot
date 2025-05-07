@@ -45,8 +45,32 @@ CREATE TABLE okx_price_levels (
 );
 
 
+-- Зачищаем таблицу
+delete from okx_price_levels;
+
+-- ETH-USDT
+DROP table if exists okx_prices_BTC;
+CREATE TABLE okx_prices_BTC as
+select * from okx_price_levels where 1=0;
+
+-- ETH-USDT
+DROP table if exists okx_prices_ETH;
+CREATE TABLE okx_prices_ETH as
+select * from okx_price_levels where 1=0;
+
+-- SOL-USDT
+DROP table if exists okx_prices_SOL;
+CREATE TABLE okx_prices_SOL as
+select * from okx_price_levels where 1=0;
+
+-- TON-USDT
+DROP table if exists okx_prices_TON;
+CREATE TABLE okx_prices_TON as
+select * from okx_price_levels where 1=0;
+
 -- Смотрим результаты
-select count(*) from okx_price_levels;
+select count(*)/10 as cnt_snapshots
+from okx_price_levels;
 
 select * from okx_price_levels
 where 1=1
