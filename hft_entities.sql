@@ -95,7 +95,11 @@ from okx_prices_btc
 
 UNION
 
-select 'ETH' as ticker, count(*) as cnt_rows
+select
+    'ETH' as ticker,
+    count(*) as cnt_rows
+--     max(case when type = 'bid' then price else 0 end) as max_bid_price,
+--     max(case when type = 'ask' then price else 0 end) as min_ask_price
 from okx_prices_eth
 
 UNION
@@ -107,4 +111,5 @@ UNION
 
 select 'TON' as ticker, count(*) as cnt_rows
 from okx_prices_ton;
+
 

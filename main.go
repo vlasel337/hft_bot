@@ -226,10 +226,10 @@ func collectAndSave(db *gorm.DB, instrumentApiID string, depth int, tableName st
 func main() {
 	// Список инструментов для отслеживания
 	instrumentsToMonitor := []InstrumentConfig{
-		{ApiID: "BTC-USDT", TableName: "okx_prices_btc"},
-		{ApiID: "ETH-USDT", TableName: "okx_prices_eth"},
-		{ApiID: "SOL-USDT", TableName: "okx_prices_sol"},
-		{ApiID: "TON-USDT", TableName: "okx_prices_ton"},
+		{ApiID: "BTC-USD", TableName: "okx_prices_btc"},
+		{ApiID: "ETH-USD", TableName: "okx_prices_eth"},
+		{ApiID: "SOL-USD", TableName: "okx_prices_sol"},
+		{ApiID: "TON-USD", TableName: "okx_prices_ton"},
 		// Добавьте сюда другие инструменты при необходимости
 	}
 
