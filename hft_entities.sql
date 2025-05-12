@@ -1,6 +1,6 @@
 -------------------------------------------------------
 -- DDL таблиц
-DROP table if exists okx_prices_btc;
+DROP table if exists okx_prices_btc CASCADE;
 CREATE TABLE okx_prices_btc (
     id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
     snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
@@ -11,7 +11,7 @@ CREATE TABLE okx_prices_btc (
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
-DROP table if exists okx_prices_eth;
+DROP table if exists okx_prices_eth CASCADE;
 CREATE TABLE okx_prices_eth (
     id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
     snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
@@ -22,7 +22,7 @@ CREATE TABLE okx_prices_eth (
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
-DROP table if exists okx_prices_sol;
+DROP table if exists okx_prices_sol CASCADE;
 CREATE TABLE okx_prices_sol (
     id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
     snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
@@ -33,7 +33,7 @@ CREATE TABLE okx_prices_sol (
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
-DROP table if exists okx_prices_ton;
+DROP table if exists okx_prices_ton CASCADE;
 CREATE TABLE okx_prices_ton (
     id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
     snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
@@ -158,3 +158,44 @@ union all
 select 'TON' as ticker, max(timedelta) from timegaps_ton;
 
 select * from timegaps;
+
+-- Проверка спрэда
+select * from okx_prices_sol
+
+with pricegaps_btc as (
+    select
+        *,
+        lag(price, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_price,
+        price - lag(price, 1) OVER (partition by type, level order by snapshot_timestamp) as pricedelta
+    from okx_prices_btc
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+),
+pricegaps_eth as (
+    select
+        *,
+        lag(price, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_price,
+        price - lag(price, 1) OVER (partition by type, level order by snapshot_timestamp) as pricedelta
+    from okx_prices_eth
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+)
+select
+    'ETH' as ticker,
+    max(pricedelta) as max_pricedelta,
+    min(pricedelta) as min_pricedelta
+from pricegaps_eth
+
+UNION
+
+select
+    'BTC' as ticker,
+    max(pricedelta) as max_pricedelta,
+    min(pricedelta) as min_pricedelta
+from pricegaps_btc
+
+
+select * from okx_prices_btc
+where level = 1
+order by snapshot_timestamp desc
+
