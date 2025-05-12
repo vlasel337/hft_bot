@@ -1,36 +1,49 @@
-DROP table if exists crypto_prices;
-CREATE TABLE crypto_prices (
-    id SERIAL PRIMARY KEY,
-    ticker VARCHAR(10) UNIQUE NOT NULL,
-    price DECIMAL(18, 8) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-------------------------------------------------------
+-- DDL таблиц
+DROP table if exists okx_prices_btc;
+CREATE TABLE okx_prices_btc (
+    id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
+    snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
+    price NUMERIC(20, 10) NOT NULL, -- Цена на этом уровне
+    size NUMERIC(20, 10) NOT NULL, -- Объем на этом уровне
+    type VARCHAR(4) NOT NULL CHECK (type IN ('bid', 'ask')), -- Тип: 'bid' или 'ask'
+    level INT NOT NULL, -- Уровень в стакане (например, 1 для лучшей цены, 2 для следующей и т.д.)
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
--- Вставка 10 тестовых тикеров и их случайных цен
-INSERT INTO crypto_prices (ticker, price) VALUES
-('BTCUSDT', random() * 70000 + 60000),
-('ETHUSDT', random() * 4000 + 3000),
-('BNBUSDT', random() * 600 + 500),
-('XRPUSDT', random() * 1.5 + 0.5),
-('ADAUSDT', random() * 0.8 + 0.3),
-('DOGEUSDT', random() * 0.2 + 0.05),
-('SOLUSDT', random() * 200 + 100),
-('DOTUSDT', random() * 30 + 15),
-('MATICUSDT', random() * 1.2 + 0.7),
-('LTCUSDT', random() * 100 + 70);
-
-select * from crypto_prices;
-
-DROP table if exists okx_price_snapshots;
-CREATE TABLE okx_price_snapshots (
-    id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка снимка стакана
-    best_bid NUMERIC(20, 10) NOT NULL, -- Лучшая цена покупки (bid)
-    best_ask NUMERIC(20, 10) NOT NULL, -- Лучшая цена продажи (ask)
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка создания записи (опционально)
+DROP table if exists okx_prices_eth;
+CREATE TABLE okx_prices_eth (
+    id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
+    snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
+    price NUMERIC(20, 10) NOT NULL, -- Цена на этом уровне
+    size NUMERIC(20, 10) NOT NULL, -- Объем на этом уровне
+    type VARCHAR(4) NOT NULL CHECK (type IN ('bid', 'ask')), -- Тип: 'bid' или 'ask'
+    level INT NOT NULL, -- Уровень в стакане (например, 1 для лучшей цены, 2 для следующей и т.д.)
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
 
-select * from okx_price_snapshots;
+DROP table if exists okx_prices_sol;
+CREATE TABLE okx_prices_sol (
+    id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
+    snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
+    price NUMERIC(20, 10) NOT NULL, -- Цена на этом уровне
+    size NUMERIC(20, 10) NOT NULL, -- Объем на этом уровне
+    type VARCHAR(4) NOT NULL CHECK (type IN ('bid', 'ask')), -- Тип: 'bid' или 'ask'
+    level INT NOT NULL, -- Уровень в стакане (например, 1 для лучшей цены, 2 для следующей и т.д.)
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
+);
+
+DROP table if exists okx_prices_ton;
+CREATE TABLE okx_prices_ton (
+    id SERIAL PRIMARY KEY, -- Уникальный идентификатор записи уровня
+    snapshot_timestamp TIMESTAMP WITH TIME ZONE NOT NULL, -- Временная метка всего снимка стакана
+    price NUMERIC(20, 10) NOT NULL, -- Цена на этом уровне
+    size NUMERIC(20, 10) NOT NULL, -- Объем на этом уровне
+    type VARCHAR(4) NOT NULL CHECK (type IN ('bid', 'ask')), -- Тип: 'bid' или 'ask'
+    level INT NOT NULL, -- Уровень в стакане (например, 1 для лучшей цены, 2 для следующей и т.д.)
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
+);
+
 
 -- Таблица со всеми ценами (5 bid и 5 ask за 1 снэпшот)
 DROP table if exists okx_price_levels;
@@ -43,73 +56,105 @@ CREATE TABLE okx_price_levels (
     level INT NOT NULL, -- Уровень в стакане (например, 1 для лучшей цены, 2 для следующей и т.д.)
     recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- Временная метка фактической записи в БД (опционально)
 );
-
-
--- Зачищаем таблицу
-delete from okx_price_levels;
-
--- ETH-USDT
-DROP table if exists okx_prices_BTC;
-CREATE TABLE okx_prices_BTC as
-select * from okx_price_levels where 1=0;
-
--- ETH-USDT
-DROP table if exists okx_prices_ETH;
-CREATE TABLE okx_prices_ETH as
-select * from okx_price_levels where 1=0;
-
--- SOL-USDT
-DROP table if exists okx_prices_SOL;
-CREATE TABLE okx_prices_SOL as
-select * from okx_price_levels where 1=0;
-
--- TON-USDT
-DROP table if exists okx_prices_TON;
-CREATE TABLE okx_prices_TON as
-select * from okx_price_levels where 1=0;
-
--- Смотрим результаты
-select count(*)/10 as cnt_snapshots
-from okx_price_levels;
-
-select * from okx_price_levels
-where 1=1
-    and type = 'ask'
-order by snapshot_timestamp desc, id desc
-limit 1000;
-
+-------------------------------------------------------
 -- Чистки таблиц
 delete from okx_prices_btc;
 delete from okx_prices_eth;
 delete from okx_prices_sol;
 delete from okx_prices_ton;
+-------------------------------------------------------
+-- Проверяем заполняемость
+drop view if exists data_load_stats;
+create view data_load_stats as (
+    select
+        'BTC' as ticker,
+        count(*) as cnt_rows
+    from okx_prices_btc
 
-drop table "okx_prices_TON";
-drop table "okx_prices_BTC";
-drop table "okx_prices_ETH";
-drop table "okx_prices_SOL";
+    UNION
 
------- Проверяем заполняемость
-select 'BTC' as ticker, count(*) as cnt_rows
-from okx_prices_btc
+    select
+        'ETH' as ticker,
+        count(*) as cnt_rows
+    from okx_prices_eth
 
-UNION
+    UNION
 
-select
-    'ETH' as ticker,
-    count(*) as cnt_rows
---     max(case when type = 'bid' then price else 0 end) as max_bid_price,
---     max(case when type = 'ask' then price else 0 end) as min_ask_price
-from okx_prices_eth
+    select
+        'SOL' as ticker,
+        count(*) as cnt_rows
+    from okx_prices_sol
 
-UNION
+    UNION
 
-select 'SOL' as ticker, count(*) as cnt_rows
-from okx_prices_sol
+    select
+        'TON' as ticker,
+        count(*) as cnt_rows
+    from okx_prices_ton
+);
 
-UNION
-
-select 'TON' as ticker, count(*) as cnt_rows
-from okx_prices_ton;
+select * from data_load_stats;
+-------------------------------------------------------
+-- Проверяем таблицы
 
 
+-- Анализ временных гэпов между снэпшотами
+drop view if exists timegaps;
+create view timegaps as
+with timegaps_btc as (
+    select
+        *,
+        lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_snapshot,
+        TO_CHAR(
+            snapshot_timestamp::timestamp - (lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp))::timestamp,
+            'MI:SS'
+        ) as timedelta
+    from okx_prices_btc
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+),
+timegaps_eth as (
+    select
+        *,
+        lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_snapshot,
+        TO_CHAR(
+            snapshot_timestamp::timestamp - (lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp))::timestamp,
+            'MI:SS'
+        ) as timedelta
+    from okx_prices_eth
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+),
+timegaps_sol as (
+    select
+        *,
+        lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_snapshot,
+        TO_CHAR(
+            snapshot_timestamp::timestamp - (lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp))::timestamp,
+            'MI:SS'
+        ) as timedelta
+    from okx_prices_sol
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+),
+timegaps_ton as (
+    select
+        *,
+        lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp) as previous_snapshot,
+        TO_CHAR(
+            snapshot_timestamp::timestamp - (lag(snapshot_timestamp, 1) OVER (partition by type, level order by snapshot_timestamp))::timestamp,
+            'MI:SS'
+        ) as timedelta
+    from okx_prices_ton
+    where 1 = 1
+    order by type, level, snapshot_timestamp desc
+)
+select 'BTC' as ticker, max(timedelta) from timegaps_btc
+union all
+select 'ETH' as ticker, max(timedelta) from timegaps_eth
+union all
+select 'SOL' as ticker, max(timedelta) from timegaps_sol
+union all
+select 'TON' as ticker, max(timedelta) from timegaps_ton;
+
+select * from timegaps;
