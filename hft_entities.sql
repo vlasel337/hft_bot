@@ -97,7 +97,6 @@ select * from data_load_stats;
 -------------------------------------------------------
 -- Проверяем таблицы
 
-
 -- Анализ временных гэпов между снэпшотами
 drop view if exists timegaps;
 create view timegaps as
@@ -160,7 +159,7 @@ select 'TON' as ticker, max(timedelta) from timegaps_ton;
 select * from timegaps;
 
 -- Проверка спрэда
-select * from okx_prices_sol
+select * from okx_prices_sol;
 
 with pricegaps_btc as (
     select
@@ -192,10 +191,214 @@ select
     'BTC' as ticker,
     max(pricedelta) as max_pricedelta,
     min(pricedelta) as min_pricedelta
-from pricegaps_btc
+from pricegaps_btc;
 
 
+-- Проверка спрэда
 select * from okx_prices_btc
 where level = 1
 order by snapshot_timestamp desc
+
+-- Цены
+select
+    'BTC' as ticker,
+    max(price) as max_price,
+    min(price) as min_price,
+    max(price) - min(price) as range
+from okx_prices_btc
+
+UNION
+
+select
+    'ETH' as ticker,
+    max(price) as max_price,
+    min(price) as min_price,
+    max(price) - min(price) as range
+from okx_prices_eth
+
+UNION
+
+select
+    'SOL' as ticker,
+    max(price) as max_price,
+    min(price) as min_price,
+    max(price) - min(price) as range
+from okx_prices_sol
+
+UNION
+
+select
+    'TON' as ticker,
+    max(price) as max_price,
+    min(price) as min_price,
+    max(price) - min(price) as range
+from okx_prices_ton;
+
+--------------------------------- Features marts ---------------------------------
+-- BTC
+drop view if exists features_mart_btc;
+create view features_mart_btc as
+select
+    snapshot_timestamp,
+
+    sum(case when type = 'bid' and level = 1 then price else 0 end) as bid_1,
+    sum(case when type = 'bid' and level = 1 then size else 0 end) as size_bid_1,
+
+    sum(case when type = 'bid' and level = 2 then price else 0 end) as bid_2,
+    sum(case when type = 'bid' and level = 2 then size else 0 end) as size_bid_2,
+
+    sum(case when type = 'bid' and level = 3 then price else 0 end) as bid_3,
+    sum(case when type = 'bid' and level = 3 then size else 0 end) as size_bid_3,
+
+    sum(case when type = 'bid' and level = 4 then price else 0 end) as bid_4,
+    sum(case when type = 'bid' and level = 4 then size else 0 end) as size_bid_4,
+
+    sum(case when type = 'bid' and level = 5 then price else 0 end) as bid_5,
+    sum(case when type = 'bid' and level = 5 then size else 0 end) as size_bid_5,
+
+    sum(case when type = 'ask' and level = 1 then price else 0 end) as ask_1,
+    sum(case when type = 'ask' and level = 1 then size else 0 end) as size_ask_1,
+
+    sum(case when type = 'ask' and level = 2 then price else 0 end) as ask_2,
+    sum(case when type = 'ask' and level = 2 then size else 0 end) as size_ask_2,
+
+    sum(case when type = 'ask' and level = 3 then price else 0 end) as ask_3,
+    sum(case when type = 'ask' and level = 3 then size else 0 end) as size_ask_3,
+
+    sum(case when type = 'ask' and level = 4 then price else 0 end) as ask_4,
+    sum(case when type = 'ask' and level = 4 then size else 0 end) as size_ask_4,
+
+    sum(case when type = 'ask' and level = 5 then price else 0 end) as ask_5,
+    sum(case when type = 'ask' and level = 5 then size else 0 end) as size_ask_5
+from okx_prices_btc
+group by snapshot_timestamp
+order by snapshot_timestamp desc;
+
+-- ETH
+drop view if exists features_mart_eth;
+create view features_mart_eth as
+select
+    snapshot_timestamp,
+
+    sum(case when type = 'bid' and level = 1 then price else 0 end) as bid_1,
+    sum(case when type = 'bid' and level = 1 then size else 0 end) as size_bid_1,
+
+    sum(case when type = 'bid' and level = 2 then price else 0 end) as bid_2,
+    sum(case when type = 'bid' and level = 2 then size else 0 end) as size_bid_2,
+
+    sum(case when type = 'bid' and level = 3 then price else 0 end) as bid_3,
+    sum(case when type = 'bid' and level = 3 then size else 0 end) as size_bid_3,
+
+    sum(case when type = 'bid' and level = 4 then price else 0 end) as bid_4,
+    sum(case when type = 'bid' and level = 4 then size else 0 end) as size_bid_4,
+
+    sum(case when type = 'bid' and level = 5 then price else 0 end) as bid_5,
+    sum(case when type = 'bid' and level = 5 then size else 0 end) as size_bid_5,
+
+    sum(case when type = 'ask' and level = 1 then price else 0 end) as ask_1,
+    sum(case when type = 'ask' and level = 1 then size else 0 end) as size_ask_1,
+
+    sum(case when type = 'ask' and level = 2 then price else 0 end) as ask_2,
+    sum(case when type = 'ask' and level = 2 then size else 0 end) as size_ask_2,
+
+    sum(case when type = 'ask' and level = 3 then price else 0 end) as ask_3,
+    sum(case when type = 'ask' and level = 3 then size else 0 end) as size_ask_3,
+
+    sum(case when type = 'ask' and level = 4 then price else 0 end) as ask_4,
+    sum(case when type = 'ask' and level = 4 then size else 0 end) as size_ask_4,
+
+    sum(case when type = 'ask' and level = 5 then price else 0 end) as ask_5,
+    sum(case when type = 'ask' and level = 5 then size else 0 end) as size_ask_5
+from okx_prices_eth
+group by snapshot_timestamp
+order by snapshot_timestamp desc;
+
+-- SOL
+drop view if exists features_mart_sol;
+create view features_mart_sol as
+select
+    snapshot_timestamp,
+
+    sum(case when type = 'bid' and level = 1 then price else 0 end) as bid_1,
+    sum(case when type = 'bid' and level = 1 then size else 0 end) as size_bid_1,
+
+    sum(case when type = 'bid' and level = 2 then price else 0 end) as bid_2,
+    sum(case when type = 'bid' and level = 2 then size else 0 end) as size_bid_2,
+
+    sum(case when type = 'bid' and level = 3 then price else 0 end) as bid_3,
+    sum(case when type = 'bid' and level = 3 then size else 0 end) as size_bid_3,
+
+    sum(case when type = 'bid' and level = 4 then price else 0 end) as bid_4,
+    sum(case when type = 'bid' and level = 4 then size else 0 end) as size_bid_4,
+
+    sum(case when type = 'bid' and level = 5 then price else 0 end) as bid_5,
+    sum(case when type = 'bid' and level = 5 then size else 0 end) as size_bid_5,
+
+    sum(case when type = 'ask' and level = 1 then price else 0 end) as ask_1,
+    sum(case when type = 'ask' and level = 1 then size else 0 end) as size_ask_1,
+
+    sum(case when type = 'ask' and level = 2 then price else 0 end) as ask_2,
+    sum(case when type = 'ask' and level = 2 then size else 0 end) as size_ask_2,
+
+    sum(case when type = 'ask' and level = 3 then price else 0 end) as ask_3,
+    sum(case when type = 'ask' and level = 3 then size else 0 end) as size_ask_3,
+
+    sum(case when type = 'ask' and level = 4 then price else 0 end) as ask_4,
+    sum(case when type = 'ask' and level = 4 then size else 0 end) as size_ask_4,
+
+    sum(case when type = 'ask' and level = 5 then price else 0 end) as ask_5,
+    sum(case when type = 'ask' and level = 5 then size else 0 end) as size_ask_5
+from okx_prices_sol
+group by snapshot_timestamp
+order by snapshot_timestamp desc;
+
+-- TON
+drop view if exists features_mart_ton;
+create view features_mart_ton as
+select
+    snapshot_timestamp,
+
+    sum(case when type = 'bid' and level = 1 then price else 0 end) as bid_1,
+    sum(case when type = 'bid' and level = 1 then size else 0 end) as size_bid_1,
+
+    sum(case when type = 'bid' and level = 2 then price else 0 end) as bid_2,
+    sum(case when type = 'bid' and level = 2 then size else 0 end) as size_bid_2,
+
+    sum(case when type = 'bid' and level = 3 then price else 0 end) as bid_3,
+    sum(case when type = 'bid' and level = 3 then size else 0 end) as size_bid_3,
+
+    sum(case when type = 'bid' and level = 4 then price else 0 end) as bid_4,
+    sum(case when type = 'bid' and level = 4 then size else 0 end) as size_bid_4,
+
+    sum(case when type = 'bid' and level = 5 then price else 0 end) as bid_5,
+    sum(case when type = 'bid' and level = 5 then size else 0 end) as size_bid_5,
+
+    sum(case when type = 'ask' and level = 1 then price else 0 end) as ask_1,
+    sum(case when type = 'ask' and level = 1 then size else 0 end) as size_ask_1,
+
+    sum(case when type = 'ask' and level = 2 then price else 0 end) as ask_2,
+    sum(case when type = 'ask' and level = 2 then size else 0 end) as size_ask_2,
+
+    sum(case when type = 'ask' and level = 3 then price else 0 end) as ask_3,
+    sum(case when type = 'ask' and level = 3 then size else 0 end) as size_ask_3,
+
+    sum(case when type = 'ask' and level = 4 then price else 0 end) as ask_4,
+    sum(case when type = 'ask' and level = 4 then size else 0 end) as size_ask_4,
+
+    sum(case when type = 'ask' and level = 5 then price else 0 end) as ask_5,
+    sum(case when type = 'ask' and level = 5 then size else 0 end) as size_ask_5
+from okx_prices_ton
+group by snapshot_timestamp
+order by snapshot_timestamp desc;
+--------------------------------------------------------------------------------
+-- Смотрим вьюхи с фичами
+select * from features_mart_btc;
+
+select * from features_mart_sol;
+
+select * from features_mart_ton;
+
+select * from features_mart_eth;
+
+
 
