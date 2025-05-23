@@ -197,7 +197,7 @@ from pricegaps_btc;
 -- Проверка спрэда
 select * from okx_prices_btc
 where level = 1
-order by snapshot_timestamp desc
+order by snapshot_timestamp desc;
 
 -- Цены
 select
@@ -399,6 +399,9 @@ select * from features_mart_sol;
 select * from features_mart_ton;
 
 select * from features_mart_eth;
+
+-- Смотрим заполняемость
+select * from data_load_stats;
 
 
 

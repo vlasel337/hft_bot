@@ -252,10 +252,10 @@ func main() {
 	// dbPort := os.Getenv("DB_PORT")
 
 	//Передаем креды БД в явном виде (нужно будет убрать спрятать их в переменные окружения)
-	dbHost := "dpg-d05l1pq4d50c73f4qqfg-a.frankfurt-postgres.render.com"
+	dbHost := "dpg-d0o41m6mcj7s73e3q1r0-a.frankfurt-postgres.render.com"
 	dbUser := "admin"
-	dbPassword := "958G9FNfWvQGUvfmy3oiiftd5MjAu0OD"
-	dbName := "hft_0yd2"
+	dbPassword := "TLPxZxGsXwxCZG54Mc9ocIEsz6cg6EwT"
+	dbName := "hft_db"
 	dbPort := "5432"
 
 	// Формирование строки подключения
