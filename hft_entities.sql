@@ -487,3 +487,20 @@ where 1=1 -- and dttm in ('2025-05-20 05:31') -- 2025-05-23 09:08;
     and rn = 1
 group by rounded_up_st, snapshot_timestamp
 order by snapshot_timestamp desc;
+
+
+-- Свечи
+drop table if exists okx_candles_btc;
+
+select count(*) from okx_candles_btc;
+select * from okx_candles_btc
+order by recorded_at desc;
+
+delete from okx_candles_btc;
+
+select
+   date(recorded_at) as dt,
+   count(*) as cnt_rows
+from okx_candles_btc
+group by date(recorded_at)
+order by date(recorded_at) desc
